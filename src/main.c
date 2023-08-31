@@ -1,3 +1,10 @@
+#include "driver/gpio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
+
+
+
 #include <stdio.h> //for basic printf commands
 #include <string.h> //for handling strings
 #include "freertos/FreeRTOS.h" //for delay,mutexs,semphrs rtos operations
@@ -13,13 +20,51 @@
 #include "lwip/netdb.h"
 
 
+
+#define LED_PIN  12
+#define PUSH_BUTTON_PIN  9
+
+
 // Server settings
 #define SERVER_IP "192.168.141.198 "
 #define SERVER_PORT 8080
 
 
+const char *ssid = "motorola";
+const char *pass = "astinbiju44";
+int retry_num=0;
+
+
+
+void sendMIDI(int sock)
+{
+     while(1) {       
+        if (gpio_get_level(PUSH_BUTTON_PIN) == 1)
+        {  
+            gpio_set_level(LED_PIN, 0);        
+        } 
+        else
+        {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);      
+            gpio_set_level(LED_PIN, 1); 
+
+
+            const char *message = "60, 62, 64";
+            printf("\nSENDING THE MESSAGE :%s\n",message);
+            printf("NOTE SEND");
+            write(sock, message, strlen(message));
+             
+        }
+
+        vTaskDelay(1);
+    }
+}
+
+
 void tcp_client_task(void *pvParameters) {
-    while (1) {
+
+    while(1){
+
         struct sockaddr_in dest_addr;
         int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
         if (sock < 0) {
@@ -39,32 +84,31 @@ void tcp_client_task(void *pvParameters) {
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
         }
+        else{
+
+            printf("\nConnection connected\n");
+            vTaskDelay(3000 / portTICK_PERIOD_MS);
+            sendMIDI(sock);
+        
+        }
 
 
-        //const char *message = "Hello from astin the boss!";
-        // printf("\nSENDING THE MESSAGE :%s\n",message);
-        // write(sock, message, strlen(message));
 
-           const char *message = "60, 62, 64";
-            printf("\nSENDING THE MESSAGE :%s\n",message);
-            printf("NOTE SEND");
-            write(sock, message, strlen(message));
 
-       
-        close(sock);
-        printf("\nSENDED\n");
-
-        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send message every 5 seconds
     }
+
+ 
+
+    
 }
 
 
 
 
 
-const char *ssid = "motorola";
-const char *pass = "astinbiju44";
-int retry_num=0;
+
+
+
 
 
 
@@ -78,6 +122,7 @@ else if (event_id == WIFI_EVENT_STA_CONNECTED)
 {
   printf("WiFi CONNECTED\n");
   xTaskCreate(tcp_client_task, "tcp_client_task", 4096, NULL, 5, NULL);
+
 }
 else if (event_id == WIFI_EVENT_STA_DISCONNECTED)
 {
@@ -92,10 +137,11 @@ else if (event_id == IP_EVENT_STA_GOT_IP)
 
 void wifi_connection()
 {
- 
+     //                          s1.4
+    // 2 - Wi-Fi Configuration Phase
     esp_netif_init();
-    esp_event_loop_create_default();     // event loop                   
-    esp_netif_create_default_wifi_sta(); // WiFi station                      
+    esp_event_loop_create_default();     // event loop                    s1.2
+    esp_netif_create_default_wifi_sta(); // WiFi station                      s1.3
     wifi_init_config_t wifi_initiation = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&wifi_initiation); //     
     esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL);
@@ -123,8 +169,11 @@ void wifi_connection()
 
 
 
+
 void app_main(void)
 {
+gpio_set_direction(LED_PIN, GPIO_MODE_OUTPUT);   
+gpio_set_direction(PUSH_BUTTON_PIN, GPIO_MODE_INPUT);
 nvs_flash_init();
 wifi_connection();
     
