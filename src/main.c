@@ -45,8 +45,10 @@ void tcp_client_task(void *pvParameters) {
         // printf("\nSENDING THE MESSAGE :%s\n",message);
         // write(sock, message, strlen(message));
 
-        int notes[] = {60, 62, 64, 65, 67, 69, 71, 72}; // MIDI note numbers
-        send(sock, notes, sizeof(notes), 0);
+           const char *message = "60, 62, 64";
+            printf("\nSENDING THE MESSAGE :%s\n",message);
+            printf("NOTE SEND");
+            write(sock, message, strlen(message));
 
        
         close(sock);
