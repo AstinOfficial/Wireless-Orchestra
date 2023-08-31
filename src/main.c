@@ -13,6 +13,51 @@
 #include "lwip/netdb.h"
 
 
+// Server settings
+#define SERVER_IP "192.168.141.198 "
+#define SERVER_PORT 8080
+
+
+void tcp_client_task(void *pvParameters) {
+    while (1) {
+        struct sockaddr_in dest_addr;
+        int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+        if (sock < 0) {
+            printf("\nUnable to create socket\n");
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+
+        dest_addr.sin_addr.s_addr = inet_addr(SERVER_IP);
+        dest_addr.sin_family = AF_INET;
+        dest_addr.sin_port = htons(SERVER_PORT);
+
+        printf("\nConnecting to %s:%d\n", SERVER_IP, SERVER_PORT);
+        if (connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr)) != 0) {
+            printf("\nConnection failed\n");
+            close(sock);
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+
+
+        //const char *message = "Hello from astin the boss!";
+        // printf("\nSENDING THE MESSAGE :%s\n",message);
+        // write(sock, message, strlen(message));
+
+        int notes[] = {60, 62, 64, 65, 67, 69, 71, 72}; // MIDI note numbers
+        send(sock, notes, sizeof(notes), 0);
+
+       
+        close(sock);
+        printf("\nSENDED\n");
+
+        vTaskDelay(5000 / portTICK_PERIOD_MS); // Send message every 5 seconds
+    }
+}
+
+
+
 
 
 const char *ssid = "motorola";
@@ -30,6 +75,7 @@ if(event_id == WIFI_EVENT_STA_START)
 else if (event_id == WIFI_EVENT_STA_CONNECTED)
 {
   printf("WiFi CONNECTED\n");
+  xTaskCreate(tcp_client_task, "tcp_client_task", 4096, NULL, 5, NULL);
 }
 else if (event_id == WIFI_EVENT_STA_DISCONNECTED)
 {
